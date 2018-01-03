@@ -5,9 +5,9 @@ module BulkInsert
     attr_accessor :before_save_callback
     attr_accessor :after_save_callback
     attr_accessor :adapter_name
-    attr_reader :ignore, :update_duplicates
+    attr_reader :ignore, :update_duplicates, :ids
 
-    def initialize(connection, table_name, column_names, set_size=500, ignore=false, update_duplicates=false)
+    def initialize(connection, table_name, column_names, set_size=500, ignore=false, update_duplicates=false, return_ids=false)
       @connection = connection
       @set_size = set_size
 
@@ -25,6 +25,10 @@ module BulkInsert
 
       @before_save_callback = nil
       @after_save_callback = nil
+
+      if @return_ids = return_ids
+        @ids = []
+      end
 
       @set = []
     end
@@ -76,7 +80,7 @@ module BulkInsert
     def save!
       if pending?
         @before_save_callback.(@set) if @before_save_callback
-        compose_insert_query.tap { |query| @connection.execute(query) if query }
+        execute_insert_query(compose_insert_query)
         @after_save_callback.() if @after_save_callback
         @set.clear
       end
@@ -107,6 +111,7 @@ module BulkInsert
       if !rows.empty?
         sql << rows.join(",")
         sql << on_conflict_statement
+        sql << return_ids_statement
         sql
       else
         false
@@ -140,6 +145,22 @@ module BulkInsert
         ' ON DUPLICATE KEY UPDATE ' + update_values
       else
         ''
+      end
+    end
+
+    def return_ids_statement
+      if (adapter_name =~ /\APost(?:greSQL|GIS)/i && @return_ids)
+        ' RETURNING id'
+      else
+        ''
+      end
+    end
+
+    def execute_insert_query(query)
+      return unless query
+      result = @connection.execute(query)
+      if @return_ids
+        @ids.concat result.map { |row| row["id"] }
       end
     end
   end

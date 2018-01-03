@@ -279,12 +279,14 @@ class BulkInsertWorkerTest < ActiveSupport::TestCase
       Testing.connection,
       Testing.table_name,
       %w(greeting age happy created_at updated_at color),
-      500, # batch size
-      true) # ignore
+      500,   # batch size
+      true,  # ignore
+      false, # update_duplicates
+      true)  # return_ids
     pgsql_worker.adapter_name = 'PostgreSQL'
     pgsql_worker.add ["Yo", 15, false, nil, nil]
 
-    assert_equal pgsql_worker.compose_insert_query, "INSERT  INTO \"testings\" (\"greeting\",\"age\",\"happy\",\"created_at\",\"updated_at\",\"color\") VALUES ('Yo',15,'f',NULL,NULL,'chartreuse') ON CONFLICT DO NOTHING"
+    assert_equal pgsql_worker.compose_insert_query, "INSERT  INTO \"testings\" (\"greeting\",\"age\",\"happy\",\"created_at\",\"updated_at\",\"color\") VALUES ('Yo',15,'f',NULL,NULL,'chartreuse') ON CONFLICT DO NOTHING RETURNING id"
   end
 
   test "adapter dependent PostGIS methods" do

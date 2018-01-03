@@ -167,6 +167,22 @@ Book.bulk_insert(*destination_columns, update_duplicates: true) do |worker|
 end
 ```
 
+### Return Inserted IDs (PostgreSQL)
+
+If you want to know the `id` values that were assigned for all of the rows
+you just inserted, use the _return_ids_ option. When set to true, the call
+to _bulk_insert_ will return an array of id values. The default is false.
+
+```ruby
+# Get ID values of inserted rows
+ids = Book.bulk_insert(return_ids: true) do |worker|
+  worker.add(...)
+  # ...
+end
+
+last_book = Book.find(ids[-1])
+```
+
 
 ## License
 
